@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+## THIS SCRIPT WAS BUILT BY xRedCrystalx
+
 ### ===== CONFIG =====
 HYTALE_USER="hytale"
 HYTALE_DIR="/opt/hytale-server"
