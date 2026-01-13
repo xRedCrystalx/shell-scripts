@@ -1,0 +1,23 @@
+[Unit]
+Description=Start scripts HTTP Server
+After=network.target
+
+[Service]
+Type=simple
+User=web
+ExecStart=/usr/bin/node /opt/shell-scripts/server.js
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/shell-scripts/public
+
+Environment=NODE_ENV=production
+Environment=HOST=0.0.0.0
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target
