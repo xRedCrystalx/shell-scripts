@@ -7,7 +7,7 @@ SERVICE_FILE="/opt/hytale-server/hytale.service"
 
 JAVA_BIN="/usr/bin/java"
 SERVER_JAR="HytaleServer.jar"
-ASSETS_ZIP="PathToAssets.zip"
+ASSETS_ZIP="Assets.zip"
 ### ==================
 
 
@@ -22,7 +22,7 @@ apt install -y wget apt-transport-https gpg ufw zip ca-certificates
 
 echo "=== Creating user and directories ==="
 if ! id "$HYTALE_USER" &>/dev/null; then
-  useradd --system --home "$HYTALE_DIR" --shell /usr/sbin/nologin "$HYTALE_USER"
+  adduser --system --group --home "$HYTALE_DIR" --shell /usr/sbin/nologin "$HYTALE_USER"
 fi
 
 mkdir -p "$HYTALE_DIR"
@@ -38,12 +38,10 @@ fi
 CODENAME="$(awk -F= '/^VERSION_CODENAME/{print $2}' /etc/os-release)"
 echo "deb https://packages.adoptium.net/artifactory/deb $CODENAME main" > /etc/apt/sources.list.d/adoptium.list
 
-sudo apt update
-sudo apt install temurin-25-jdk -y
-
+apt update
+apt install temurin-25-jdk -y
 
 echo "=== Downloading Hytale server downloader ==="
-
 wget -O hytale-downloader.zip https://downloader.hytale.com/hytale-downloader.zip
 unzip -o hytale-downloader.zip
 
@@ -53,9 +51,8 @@ echo "!!! Hytale downloader requires authentication. !!!"
 echo "You will be prompted, follow the instructions."
 
 ./hytale-downloader-linux-amd64 -download-path "$HYTALE_DIR/server.zip"
-
-# TODO: unzipping server files and removing .zip
-
+unzip "$HYTALE_DIR/server.zip" -d "$HYTALE_DIR"
+rm "$HYTALE_DIR/server.zip"
 
 echo "=== Creating systemd service (server auto start) ==="
 cat > "$SERVICE_FILE" <<EOF
@@ -66,7 +63,7 @@ After=network.target
 [Service]
 User=$HYTALE_USER
 WorkingDirectory=$HYTALE_DIR
-ExecStart=$JAVA_BIN -jar $HYTALE_DIR/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP
+ExecStart=$JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP
 Restart=always
 RestartSec=5
 
@@ -75,7 +72,7 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable hytale.service
+systemctl enable "$HYTALE_DIR/hytale.service"
 
 echo "=== Configuring firewall (UFW) ==="
 ufw default deny incoming
@@ -91,3 +88,4 @@ echo "  journalctl -u hytale -f"
 
 echo "Server files are located in [$HYTALE_DIR] and will be run as user [$HYTALE_USER]"
 echo "You may need to edit server properties and EULA before first start."
+echo "Start this server as root first [$JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP] and then authenticate it with "/auth login device" comamnd"
