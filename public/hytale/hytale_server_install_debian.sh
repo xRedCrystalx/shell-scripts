@@ -3,7 +3,7 @@
 ### ===== CONFIG =====
 HYTALE_USER="hytale"
 HYTALE_DIR="/opt/hytale-server"
-SERVICE_FILE="/opt/hytale-server/hytale.service"
+SERVICE_FILE="$HYTALE_DIR/hytale.service"
 
 JAVA_BIN="/usr/bin/java"
 SERVER_JAR="HytaleServer.jar"
@@ -88,4 +88,5 @@ echo "  journalctl -u hytale -f"
 
 echo "Server files are located in [$HYTALE_DIR] and will be run as user [$HYTALE_USER]"
 echo "You may need to edit server properties and EULA before first start."
-echo "Start this server as root first [$JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP] and then authenticate it with "/auth login device" comamnd"
+echo "Start this server as root first [$JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP]"
+echo "then authenticate it with "/auth login device" commnd and then /auth persistence Encrypted"
