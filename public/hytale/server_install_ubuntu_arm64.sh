@@ -92,5 +92,5 @@ echo "Server files are located in [$HYTALE_DIR] and will be run as user [$HYTALE
 echo "You may need to edit server properties and EULA before first start."
 echo "Start this server as [$HYTALE_USER] user first"
 echo "-> su - $HYTALE_USER -s /bin/bash"
-echi "-> $JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP"
+echo "-> $JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP"
 echo "then authenticate it with "/auth login device" command and then /auth persistence Encrypted"
