@@ -20,17 +20,7 @@ fi
 
 echo "=== Installing required packages ==="
 apt update
-apt install -y wget apt-transport-https gpg ufw zip ca-certificates
-
-echo "=== Creating user and directories ==="
-if ! id "$HYTALE_USER" &>/dev/null; then
-  adduser --system --group --home "$HYTALE_DIR" --shell /usr/sbin/nologin "$HYTALE_USER"
-fi
-
-mkdir -p "$HYTALE_DIR"
-chown -R root:$HYTALE_USER "$HYTALE_DIR"
-chmod -R 770 "$HYTALE_DIR"
-
+apt install -y wget apt-transport-https gpg ufw zip ca-certificates tmux
 
 echo "=== Installing Temurin JDK 25 ==="
 if [[ ! -f /etc/apt/trusted.gpg.d/adoptium.gpg ]]; then
@@ -42,6 +32,13 @@ echo "deb https://packages.adoptium.net/artifactory/deb $CODENAME main" > /etc/a
 
 apt update
 apt install temurin-25-jdk -y
+
+echo "=== Creating user and directories ==="
+if ! id "$HYTALE_USER" &>/dev/null; then
+  adduser --system --group --home "$HYTALE_DIR" --shell /usr/sbin/nologin "$HYTALE_USER"
+fi
+
+mkdir -p "$HYTALE_DIR"
 
 echo "=== Downloading Hytale server downloader ==="
 wget -O hytale-downloader.zip https://downloader.hytale.com/hytale-downloader.zip
@@ -56,7 +53,8 @@ echo "You will be prompted, follow the instructions."
 unzip "$HYTALE_DIR/server.zip" -d "$HYTALE_DIR"
 rm "$HYTALE_DIR/server.zip"
 
-echo "=== Creating systemd service (server auto start) ==="
+# Service file
+echo "=== Creating services, commands and motd ==="
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Startup script for Hytale server
@@ -64,33 +62,61 @@ After=network.target
 
 [Service]
 User=$HYTALE_USER
+Type=forking
 WorkingDirectory=$HYTALE_DIR
-ExecStart=$JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP
-Restart=always
-RestartSec=5
+Environment='SHELL=/bin/bash'
+ExecStart=/usr/bin/tmux new -d -s hytale '$JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP'
+ExecStop=/usr/bin/tmux kill-session -t hytale
+Restart=no
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable "$HYTALE_DIR/hytale.service"
+tee /usr/local/bin/hytale-console > /dev/null <<EOF
+#!/bin/bash
+echo "Attaching to Hytale console... (Press Ctrl+B, then D to detach)"
+runuser -u hytale -- tmux attach -t hytale
+EOF
+
+tee /etc/motd > /dev/null <<EOF
+
+=========================================================
+                 HYTALE SERVER MANAGEMENT                
+=========================================================
+Server files are located in [$HYTALE_DIR] and will be run as user [$HYTALE_USER]
+
+To manage the server, use the following commands:
+
+  Start server:   sudo systemctl start hytale (server will automatically start on boot)
+  Stop server:    sudo systemctl stop hytale
+  Restart server: sudo systemctl restart hytale
+  View status:    sudo systemctl status hytale
+
+To access the live server console:
+  Run:            hytale-console
+  To exit:        Press Ctrl+B, let go, then press D
+
+Note:
+You will have to authenticate the server with "/auth login device" command and then "/auth persistence Encrypted" on first start.
+
+=========================================================
+EOF
 
 echo "=== Configuring firewall (UFW) ==="
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 5520/udp
-ufw --force enable
+ufw allow 22/tcp
+ufw enable
 
-echo "=== DONE ==="
-echo "Start/stop the server with:"
-echo "  systemctl start|stop hytale"
-echo "Check logs with:"
-echo "  journalctl -u hytale -f"
+echo "=== Finishing up ==="
+chown -R $HYTALE_USER:$HYTALE_USER "$HYTALE_DIR"
+chmod -R 770 "$HYTALE_DIR"
+chmod +x /usr/local/bin/hytale-console
 
-echo "Server files are located in [$HYTALE_DIR] and will be run as user [$HYTALE_USER]"
-echo "You may need to edit server properties and EULA before first start."
-echo "Start this server as [$HYTALE_USER] user first"
-echo "-> su - $HYTALE_USER -s /bin/bash"
-echo "-> $JAVA_BIN -jar $HYTALE_DIR/Server/$SERVER_JAR --assets $HYTALE_DIR/$ASSETS_ZIP"
-echo "then authenticate it with "/auth login device" command and then /auth persistence Encrypted"
+systemctl daemon-reload
+systemctl enable "$HYTALE_DIR/hytale.service"
+
+echo "Rebooting... this might take a minute."
+reboot

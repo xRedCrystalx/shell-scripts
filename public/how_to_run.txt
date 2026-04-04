@@ -1,0 +1,4 @@
+The idea of these scripts is to provide an one-command experience for Linux. 
+Examples:
+- curl -sS https://scripts.xredcrystalx.com/path_to_file.sh | bash
+- wget -qO- https://scripts.xredcrystalx.com/path_to_file.sh | bash
